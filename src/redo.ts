@@ -44,7 +44,7 @@ export default ({
           // The "topmost" mutation
           commits = [m];
           // Do not find more mutations if the mutations does not belong to a group
-          proceed = !!m.payload.actionGroup;
+          proceed = m.payload.skip || !!m.payload.actionGroup;
         } else if (!proceed) {
           // The mutation(s) to redo have been identified
           undone = [m, ...undone];
@@ -54,7 +54,7 @@ export default ({
           const { actionGroup } = lastCommit.payload;
           // Stop finding more mutations if the current mutation belongs to
           // another actionGroup, or does not have an actionGroup
-          proceed =
+          proceed = m.payload.skip ||
             m.payload.actionGroup && m.payload.actionGroup === actionGroup;
           commits = [...(proceed ? [m] : []), ...commits];
           undone = [...(proceed ? [] : [m]), ...undone];

@@ -1,4 +1,4 @@
-(function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=g||self,f(g.undoRedo={}));}(this,function(exports){'use strict';function createCommonjsModule(fn, module) {
+(function(g,f){typeof exports==='object'&&typeof module!=='undefined'?f(exports):typeof define==='function'&&define.amd?define(['exports'],f):(g=g||self,f(g.undoRedo={}));}(this,(function(exports){'use strict';function createCommonjsModule(fn, module) {
 	return module = { exports: {} }, fn(module, module.exports), module.exports;
 }var runtime_1 = createCommonjsModule(function (module) {
 /**
@@ -132,7 +132,7 @@ var runtime = (function (exports) {
     return { __await: arg };
   };
 
-  function AsyncIterator(generator) {
+  function AsyncIterator(generator, PromiseImpl) {
     function invoke(method, arg, resolve, reject) {
       var record = tryCatch(generator[method], generator, arg);
       if (record.type === "throw") {
@@ -143,14 +143,14 @@ var runtime = (function (exports) {
         if (value &&
             typeof value === "object" &&
             hasOwn.call(value, "__await")) {
-          return Promise.resolve(value.__await).then(function(value) {
+          return PromiseImpl.resolve(value.__await).then(function(value) {
             invoke("next", value, resolve, reject);
           }, function(err) {
             invoke("throw", err, resolve, reject);
           });
         }
 
-        return Promise.resolve(value).then(function(unwrapped) {
+        return PromiseImpl.resolve(value).then(function(unwrapped) {
           // When a yielded Promise is resolved, its final value becomes
           // the .value of the Promise<{value,done}> result for the
           // current iteration.
@@ -168,7 +168,7 @@ var runtime = (function (exports) {
 
     function enqueue(method, arg) {
       function callInvokeWithMethodAndArg() {
-        return new Promise(function(resolve, reject) {
+        return new PromiseImpl(function(resolve, reject) {
           invoke(method, arg, resolve, reject);
         });
       }
@@ -208,9 +208,12 @@ var runtime = (function (exports) {
   // Note that simple async functions are implemented on top of
   // AsyncIterator objects; they just return a Promise for the value of
   // the final result produced by the iterator.
-  exports.async = function(innerFn, outerFn, self, tryLocsList) {
+  exports.async = function(innerFn, outerFn, self, tryLocsList, PromiseImpl) {
+    if (PromiseImpl === void 0) PromiseImpl = Promise;
+
     var iter = new AsyncIterator(
-      wrap(innerFn, outerFn, self, tryLocsList)
+      wrap(innerFn, outerFn, self, tryLocsList),
+      PromiseImpl
     );
 
     return exports.isGeneratorFunction(outerFn)
@@ -777,43 +780,71 @@ function _defineProperty(obj, key, value) {
   return obj;
 }
 
-function _objectSpread(target) {
+function ownKeys(object, enumerableOnly) {
+  var keys = Object.keys(object);
+
+  if (Object.getOwnPropertySymbols) {
+    var symbols = Object.getOwnPropertySymbols(object);
+    if (enumerableOnly) symbols = symbols.filter(function (sym) {
+      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+    });
+    keys.push.apply(keys, symbols);
+  }
+
+  return keys;
+}
+
+function _objectSpread2(target) {
   for (var i = 1; i < arguments.length; i++) {
     var source = arguments[i] != null ? arguments[i] : {};
-    var ownKeys = Object.keys(source);
 
-    if (typeof Object.getOwnPropertySymbols === 'function') {
-      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-      }));
+    if (i % 2) {
+      ownKeys(Object(source), true).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      });
+    } else if (Object.getOwnPropertyDescriptors) {
+      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+    } else {
+      ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
     }
-
-    ownKeys.forEach(function (key) {
-      _defineProperty(target, key, source[key]);
-    });
   }
 
   return target;
 }
 
 function _toConsumableArray(arr) {
-  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
 }
 
 function _arrayWithoutHoles(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-    return arr2;
-  }
+  if (Array.isArray(arr)) return _arrayLikeToArray(arr);
 }
 
 function _iterableToArray(iter) {
-  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+  if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter);
+}
+
+function _unsupportedIterableToArray(o, minLen) {
+  if (!o) return;
+  if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+  var n = Object.prototype.toString.call(o).slice(8, -1);
+  if (n === "Object" && o.constructor) n = o.constructor.name;
+  if (n === "Map" || n === "Set") return Array.from(o);
+  if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+}
+
+function _arrayLikeToArray(arr, len) {
+  if (len == null || len > arr.length) len = arr.length;
+
+  for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+
+  return arr2;
 }
 
 function _nonIterableSpread() {
-  throw new TypeError("Invalid attempt to spread non-iterable instance");
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }var _global = createCommonjsModule(function (module) {
 // https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 var global = module.exports = typeof window != 'undefined' && window.Math == Math
@@ -822,7 +853,7 @@ var global = module.exports = typeof window != 'undefined' && window.Math == Mat
   : Function('return this')();
 if (typeof __g == 'number') __g = global; // eslint-disable-line no-undef
 });var _core = createCommonjsModule(function (module) {
-var core = module.exports = { version: '2.6.5' };
+var core = module.exports = { version: '2.6.11' };
 if (typeof __e == 'number') __e = core; // eslint-disable-line no-undef
 });
 var _core_1 = _core.version;var _isObject = function (it) {
@@ -1106,6 +1137,267 @@ _export(_export.P + _export.F * _failsIsRegexp(INCLUDES), 'String', {
     return !!~_stringContext(this, searchString, INCLUDES)
       .indexOf(searchString, arguments.length > 1 ? arguments[1] : undefined);
   }
+});var _iterStep = function (done, value) {
+  return { value: value, done: !!done };
+};var _iterators = {};var shared = _shared('keys');
+
+var _sharedKey = function (key) {
+  return shared[key] || (shared[key] = _uid(key));
+};var arrayIndexOf = _arrayIncludes(false);
+var IE_PROTO = _sharedKey('IE_PROTO');
+
+var _objectKeysInternal = function (object, names) {
+  var O = _toIobject(object);
+  var i = 0;
+  var result = [];
+  var key;
+  for (key in O) if (key != IE_PROTO) _has(O, key) && result.push(key);
+  // Don't enum bug & hidden keys
+  while (names.length > i) if (_has(O, key = names[i++])) {
+    ~arrayIndexOf(result, key) || result.push(key);
+  }
+  return result;
+};// IE 8- don't enum bug keys
+var _enumBugKeys = (
+  'constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'
+).split(',');// 19.1.2.14 / 15.2.3.14 Object.keys(O)
+
+
+
+var _objectKeys = Object.keys || function keys(O) {
+  return _objectKeysInternal(O, _enumBugKeys);
+};var _objectDps = _descriptors ? Object.defineProperties : function defineProperties(O, Properties) {
+  _anObject(O);
+  var keys = _objectKeys(Properties);
+  var length = keys.length;
+  var i = 0;
+  var P;
+  while (length > i) _objectDp.f(O, P = keys[i++], Properties[P]);
+  return O;
+};var document$2 = _global.document;
+var _html = document$2 && document$2.documentElement;// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+
+
+
+var IE_PROTO$1 = _sharedKey('IE_PROTO');
+var Empty = function () { /* empty */ };
+var PROTOTYPE$1 = 'prototype';
+
+// Create object with fake `null` prototype: use iframe Object with cleared prototype
+var createDict = function () {
+  // Thrash, waste and sodomy: IE GC bug
+  var iframe = _domCreate('iframe');
+  var i = _enumBugKeys.length;
+  var lt = '<';
+  var gt = '>';
+  var iframeDocument;
+  iframe.style.display = 'none';
+  _html.appendChild(iframe);
+  iframe.src = 'javascript:'; // eslint-disable-line no-script-url
+  // createDict = iframe.contentWindow.Object;
+  // html.removeChild(iframe);
+  iframeDocument = iframe.contentWindow.document;
+  iframeDocument.open();
+  iframeDocument.write(lt + 'script' + gt + 'document.F=Object' + lt + '/script' + gt);
+  iframeDocument.close();
+  createDict = iframeDocument.F;
+  while (i--) delete createDict[PROTOTYPE$1][_enumBugKeys[i]];
+  return createDict();
+};
+
+var _objectCreate = Object.create || function create(O, Properties) {
+  var result;
+  if (O !== null) {
+    Empty[PROTOTYPE$1] = _anObject(O);
+    result = new Empty();
+    Empty[PROTOTYPE$1] = null;
+    // add "__proto__" for Object.getPrototypeOf polyfill
+    result[IE_PROTO$1] = O;
+  } else result = createDict();
+  return Properties === undefined ? result : _objectDps(result, Properties);
+};var def = _objectDp.f;
+
+var TAG = _wks('toStringTag');
+
+var _setToStringTag = function (it, tag, stat) {
+  if (it && !_has(it = stat ? it : it.prototype, TAG)) def(it, TAG, { configurable: true, value: tag });
+};var IteratorPrototype = {};
+
+// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
+_hide(IteratorPrototype, _wks('iterator'), function () { return this; });
+
+var _iterCreate = function (Constructor, NAME, next) {
+  Constructor.prototype = _objectCreate(IteratorPrototype, { next: _propertyDesc(1, next) });
+  _setToStringTag(Constructor, NAME + ' Iterator');
+};// 7.1.13 ToObject(argument)
+
+var _toObject = function (it) {
+  return Object(_defined(it));
+};// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
+
+
+var IE_PROTO$2 = _sharedKey('IE_PROTO');
+var ObjectProto = Object.prototype;
+
+var _objectGpo = Object.getPrototypeOf || function (O) {
+  O = _toObject(O);
+  if (_has(O, IE_PROTO$2)) return O[IE_PROTO$2];
+  if (typeof O.constructor == 'function' && O instanceof O.constructor) {
+    return O.constructor.prototype;
+  } return O instanceof Object ? ObjectProto : null;
+};var ITERATOR = _wks('iterator');
+var BUGGY = !([].keys && 'next' in [].keys()); // Safari has buggy iterators w/o `next`
+var FF_ITERATOR = '@@iterator';
+var KEYS = 'keys';
+var VALUES = 'values';
+
+var returnThis = function () { return this; };
+
+var _iterDefine = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED) {
+  _iterCreate(Constructor, NAME, next);
+  var getMethod = function (kind) {
+    if (!BUGGY && kind in proto) return proto[kind];
+    switch (kind) {
+      case KEYS: return function keys() { return new Constructor(this, kind); };
+      case VALUES: return function values() { return new Constructor(this, kind); };
+    } return function entries() { return new Constructor(this, kind); };
+  };
+  var TAG = NAME + ' Iterator';
+  var DEF_VALUES = DEFAULT == VALUES;
+  var VALUES_BUG = false;
+  var proto = Base.prototype;
+  var $native = proto[ITERATOR] || proto[FF_ITERATOR] || DEFAULT && proto[DEFAULT];
+  var $default = $native || getMethod(DEFAULT);
+  var $entries = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined;
+  var $anyNative = NAME == 'Array' ? proto.entries || $native : $native;
+  var methods, key, IteratorPrototype;
+  // Fix native
+  if ($anyNative) {
+    IteratorPrototype = _objectGpo($anyNative.call(new Base()));
+    if (IteratorPrototype !== Object.prototype && IteratorPrototype.next) {
+      // Set @@toStringTag to native iterators
+      _setToStringTag(IteratorPrototype, TAG, true);
+      // fix for some old engines
+      if ( typeof IteratorPrototype[ITERATOR] != 'function') _hide(IteratorPrototype, ITERATOR, returnThis);
+    }
+  }
+  // fix Array#{values, @@iterator}.name in V8 / FF
+  if (DEF_VALUES && $native && $native.name !== VALUES) {
+    VALUES_BUG = true;
+    $default = function values() { return $native.call(this); };
+  }
+  // Define iterator
+  if ( (BUGGY || VALUES_BUG || !proto[ITERATOR])) {
+    _hide(proto, ITERATOR, $default);
+  }
+  // Plug for library
+  _iterators[NAME] = $default;
+  _iterators[TAG] = returnThis;
+  if (DEFAULT) {
+    methods = {
+      values: DEF_VALUES ? $default : getMethod(VALUES),
+      keys: IS_SET ? $default : getMethod(KEYS),
+      entries: $entries
+    };
+    if (FORCED) for (key in methods) {
+      if (!(key in proto)) _redefine(proto, key, methods[key]);
+    } else _export(_export.P + _export.F * (BUGGY || VALUES_BUG), NAME, methods);
+  }
+  return methods;
+};// 22.1.3.4 Array.prototype.entries()
+// 22.1.3.13 Array.prototype.keys()
+// 22.1.3.29 Array.prototype.values()
+// 22.1.3.30 Array.prototype[@@iterator]()
+var es6_array_iterator = _iterDefine(Array, 'Array', function (iterated, kind) {
+  this._t = _toIobject(iterated); // target
+  this._i = 0;                   // next index
+  this._k = kind;                // kind
+// 22.1.5.2.1 %ArrayIteratorPrototype%.next()
+}, function () {
+  var O = this._t;
+  var kind = this._k;
+  var index = this._i++;
+  if (!O || index >= O.length) {
+    this._t = undefined;
+    return _iterStep(1);
+  }
+  if (kind == 'keys') return _iterStep(0, index);
+  if (kind == 'values') return _iterStep(0, O[index]);
+  return _iterStep(0, [index, O[index]]);
+}, 'values');
+
+// argumentsList[@@iterator] is %ArrayProto_values% (9.4.4.6, 9.4.4.7)
+_iterators.Arguments = _iterators.Array;
+
+_addToUnscopables('keys');
+_addToUnscopables('values');
+_addToUnscopables('entries');var ITERATOR$1 = _wks('iterator');
+var TO_STRING_TAG = _wks('toStringTag');
+var ArrayValues = _iterators.Array;
+
+var DOMIterables = {
+  CSSRuleList: true, // TODO: Not spec compliant, should be false.
+  CSSStyleDeclaration: false,
+  CSSValueList: false,
+  ClientRectList: false,
+  DOMRectList: false,
+  DOMStringList: false,
+  DOMTokenList: true,
+  DataTransferItemList: false,
+  FileList: false,
+  HTMLAllCollection: false,
+  HTMLCollection: false,
+  HTMLFormElement: false,
+  HTMLSelectElement: false,
+  MediaList: true, // TODO: Not spec compliant, should be false.
+  MimeTypeArray: false,
+  NamedNodeMap: false,
+  NodeList: true,
+  PaintRequestList: false,
+  Plugin: false,
+  PluginArray: false,
+  SVGLengthList: false,
+  SVGNumberList: false,
+  SVGPathSegList: false,
+  SVGPointList: false,
+  SVGStringList: false,
+  SVGTransformList: false,
+  SourceBufferList: false,
+  StyleSheetList: true, // TODO: Not spec compliant, should be false.
+  TextTrackCueList: false,
+  TextTrackList: false,
+  TouchList: false
+};
+
+for (var collections = _objectKeys(DOMIterables), i = 0; i < collections.length; i++) {
+  var NAME = collections[i];
+  var explicit = DOMIterables[NAME];
+  var Collection = _global[NAME];
+  var proto = Collection && Collection.prototype;
+  var key;
+  if (proto) {
+    if (!proto[ITERATOR$1]) _hide(proto, ITERATOR$1, ArrayValues);
+    if (!proto[TO_STRING_TAG]) _hide(proto, TO_STRING_TAG, NAME);
+    _iterators[NAME] = ArrayValues;
+    if (explicit) for (key in es6_array_iterator) if (!proto[key]) _redefine(proto, key, es6_array_iterator[key], true);
+  }
+}// most Object methods by ES6 should accept primitives
+
+
+
+var _objectSap = function (KEY, exec) {
+  var fn = (_core.Object || {})[KEY] || Object[KEY];
+  var exp = {};
+  exp[KEY] = exec(fn);
+  _export(_export.S + _export.F * _fails(function () { fn(1); }), 'Object', exp);
+};// 19.1.2.14 Object.keys(O)
+
+
+
+_objectSap('keys', function () {
+  return function keys(it) {
+    return _objectKeys(_toObject(it));
+  };
 });// 7.3.20 SpeciesConstructor(O, defaultConstructor)
 
 
@@ -1136,7 +1428,7 @@ var _advanceStringIndex = function (S, index, unicode) {
   return index + (unicode ? at(S, index).length : 1);
 };// getting tag from 19.1.3.6 Object.prototype.toString()
 
-var TAG = _wks('toStringTag');
+var TAG$1 = _wks('toStringTag');
 // ES3 wrong here
 var ARG = _cof(function () { return arguments; }()) == 'Arguments';
 
@@ -1151,7 +1443,7 @@ var _classof = function (it) {
   var O, T, B;
   return it === undefined ? 'Undefined' : it === null ? 'Null'
     // @@toStringTag case
-    : typeof (T = tryGet(O = Object(it), TAG)) == 'string' ? T
+    : typeof (T = tryGet(O = Object(it), TAG$1)) == 'string' ? T
     // builtinTag case
     : ARG ? _cof(O)
     // ES3 arguments fallback
@@ -1452,267 +1744,6 @@ _fixReWks('split', 2, function (defined, SPLIT, $split, maybeCallNative) {
       return A;
     }
   ];
-});var _iterStep = function (done, value) {
-  return { value: value, done: !!done };
-};var _iterators = {};var shared = _shared('keys');
-
-var _sharedKey = function (key) {
-  return shared[key] || (shared[key] = _uid(key));
-};var arrayIndexOf = _arrayIncludes(false);
-var IE_PROTO = _sharedKey('IE_PROTO');
-
-var _objectKeysInternal = function (object, names) {
-  var O = _toIobject(object);
-  var i = 0;
-  var result = [];
-  var key;
-  for (key in O) if (key != IE_PROTO) _has(O, key) && result.push(key);
-  // Don't enum bug & hidden keys
-  while (names.length > i) if (_has(O, key = names[i++])) {
-    ~arrayIndexOf(result, key) || result.push(key);
-  }
-  return result;
-};// IE 8- don't enum bug keys
-var _enumBugKeys = (
-  'constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'
-).split(',');// 19.1.2.14 / 15.2.3.14 Object.keys(O)
-
-
-
-var _objectKeys = Object.keys || function keys(O) {
-  return _objectKeysInternal(O, _enumBugKeys);
-};var _objectDps = _descriptors ? Object.defineProperties : function defineProperties(O, Properties) {
-  _anObject(O);
-  var keys = _objectKeys(Properties);
-  var length = keys.length;
-  var i = 0;
-  var P;
-  while (length > i) _objectDp.f(O, P = keys[i++], Properties[P]);
-  return O;
-};var document$2 = _global.document;
-var _html = document$2 && document$2.documentElement;// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
-
-
-
-var IE_PROTO$1 = _sharedKey('IE_PROTO');
-var Empty = function () { /* empty */ };
-var PROTOTYPE$1 = 'prototype';
-
-// Create object with fake `null` prototype: use iframe Object with cleared prototype
-var createDict = function () {
-  // Thrash, waste and sodomy: IE GC bug
-  var iframe = _domCreate('iframe');
-  var i = _enumBugKeys.length;
-  var lt = '<';
-  var gt = '>';
-  var iframeDocument;
-  iframe.style.display = 'none';
-  _html.appendChild(iframe);
-  iframe.src = 'javascript:'; // eslint-disable-line no-script-url
-  // createDict = iframe.contentWindow.Object;
-  // html.removeChild(iframe);
-  iframeDocument = iframe.contentWindow.document;
-  iframeDocument.open();
-  iframeDocument.write(lt + 'script' + gt + 'document.F=Object' + lt + '/script' + gt);
-  iframeDocument.close();
-  createDict = iframeDocument.F;
-  while (i--) delete createDict[PROTOTYPE$1][_enumBugKeys[i]];
-  return createDict();
-};
-
-var _objectCreate = Object.create || function create(O, Properties) {
-  var result;
-  if (O !== null) {
-    Empty[PROTOTYPE$1] = _anObject(O);
-    result = new Empty();
-    Empty[PROTOTYPE$1] = null;
-    // add "__proto__" for Object.getPrototypeOf polyfill
-    result[IE_PROTO$1] = O;
-  } else result = createDict();
-  return Properties === undefined ? result : _objectDps(result, Properties);
-};var def = _objectDp.f;
-
-var TAG$1 = _wks('toStringTag');
-
-var _setToStringTag = function (it, tag, stat) {
-  if (it && !_has(it = stat ? it : it.prototype, TAG$1)) def(it, TAG$1, { configurable: true, value: tag });
-};var IteratorPrototype = {};
-
-// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-_hide(IteratorPrototype, _wks('iterator'), function () { return this; });
-
-var _iterCreate = function (Constructor, NAME, next) {
-  Constructor.prototype = _objectCreate(IteratorPrototype, { next: _propertyDesc(1, next) });
-  _setToStringTag(Constructor, NAME + ' Iterator');
-};// 7.1.13 ToObject(argument)
-
-var _toObject = function (it) {
-  return Object(_defined(it));
-};// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
-
-
-var IE_PROTO$2 = _sharedKey('IE_PROTO');
-var ObjectProto = Object.prototype;
-
-var _objectGpo = Object.getPrototypeOf || function (O) {
-  O = _toObject(O);
-  if (_has(O, IE_PROTO$2)) return O[IE_PROTO$2];
-  if (typeof O.constructor == 'function' && O instanceof O.constructor) {
-    return O.constructor.prototype;
-  } return O instanceof Object ? ObjectProto : null;
-};var ITERATOR = _wks('iterator');
-var BUGGY = !([].keys && 'next' in [].keys()); // Safari has buggy iterators w/o `next`
-var FF_ITERATOR = '@@iterator';
-var KEYS = 'keys';
-var VALUES = 'values';
-
-var returnThis = function () { return this; };
-
-var _iterDefine = function (Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED) {
-  _iterCreate(Constructor, NAME, next);
-  var getMethod = function (kind) {
-    if (!BUGGY && kind in proto) return proto[kind];
-    switch (kind) {
-      case KEYS: return function keys() { return new Constructor(this, kind); };
-      case VALUES: return function values() { return new Constructor(this, kind); };
-    } return function entries() { return new Constructor(this, kind); };
-  };
-  var TAG = NAME + ' Iterator';
-  var DEF_VALUES = DEFAULT == VALUES;
-  var VALUES_BUG = false;
-  var proto = Base.prototype;
-  var $native = proto[ITERATOR] || proto[FF_ITERATOR] || DEFAULT && proto[DEFAULT];
-  var $default = $native || getMethod(DEFAULT);
-  var $entries = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined;
-  var $anyNative = NAME == 'Array' ? proto.entries || $native : $native;
-  var methods, key, IteratorPrototype;
-  // Fix native
-  if ($anyNative) {
-    IteratorPrototype = _objectGpo($anyNative.call(new Base()));
-    if (IteratorPrototype !== Object.prototype && IteratorPrototype.next) {
-      // Set @@toStringTag to native iterators
-      _setToStringTag(IteratorPrototype, TAG, true);
-      // fix for some old engines
-      if ( typeof IteratorPrototype[ITERATOR] != 'function') _hide(IteratorPrototype, ITERATOR, returnThis);
-    }
-  }
-  // fix Array#{values, @@iterator}.name in V8 / FF
-  if (DEF_VALUES && $native && $native.name !== VALUES) {
-    VALUES_BUG = true;
-    $default = function values() { return $native.call(this); };
-  }
-  // Define iterator
-  if ( (BUGGY || VALUES_BUG || !proto[ITERATOR])) {
-    _hide(proto, ITERATOR, $default);
-  }
-  // Plug for library
-  _iterators[NAME] = $default;
-  _iterators[TAG] = returnThis;
-  if (DEFAULT) {
-    methods = {
-      values: DEF_VALUES ? $default : getMethod(VALUES),
-      keys: IS_SET ? $default : getMethod(KEYS),
-      entries: $entries
-    };
-    if (FORCED) for (key in methods) {
-      if (!(key in proto)) _redefine(proto, key, methods[key]);
-    } else _export(_export.P + _export.F * (BUGGY || VALUES_BUG), NAME, methods);
-  }
-  return methods;
-};// 22.1.3.4 Array.prototype.entries()
-// 22.1.3.13 Array.prototype.keys()
-// 22.1.3.29 Array.prototype.values()
-// 22.1.3.30 Array.prototype[@@iterator]()
-var es6_array_iterator = _iterDefine(Array, 'Array', function (iterated, kind) {
-  this._t = _toIobject(iterated); // target
-  this._i = 0;                   // next index
-  this._k = kind;                // kind
-// 22.1.5.2.1 %ArrayIteratorPrototype%.next()
-}, function () {
-  var O = this._t;
-  var kind = this._k;
-  var index = this._i++;
-  if (!O || index >= O.length) {
-    this._t = undefined;
-    return _iterStep(1);
-  }
-  if (kind == 'keys') return _iterStep(0, index);
-  if (kind == 'values') return _iterStep(0, O[index]);
-  return _iterStep(0, [index, O[index]]);
-}, 'values');
-
-// argumentsList[@@iterator] is %ArrayProto_values% (9.4.4.6, 9.4.4.7)
-_iterators.Arguments = _iterators.Array;
-
-_addToUnscopables('keys');
-_addToUnscopables('values');
-_addToUnscopables('entries');var ITERATOR$1 = _wks('iterator');
-var TO_STRING_TAG = _wks('toStringTag');
-var ArrayValues = _iterators.Array;
-
-var DOMIterables = {
-  CSSRuleList: true, // TODO: Not spec compliant, should be false.
-  CSSStyleDeclaration: false,
-  CSSValueList: false,
-  ClientRectList: false,
-  DOMRectList: false,
-  DOMStringList: false,
-  DOMTokenList: true,
-  DataTransferItemList: false,
-  FileList: false,
-  HTMLAllCollection: false,
-  HTMLCollection: false,
-  HTMLFormElement: false,
-  HTMLSelectElement: false,
-  MediaList: true, // TODO: Not spec compliant, should be false.
-  MimeTypeArray: false,
-  NamedNodeMap: false,
-  NodeList: true,
-  PaintRequestList: false,
-  Plugin: false,
-  PluginArray: false,
-  SVGLengthList: false,
-  SVGNumberList: false,
-  SVGPathSegList: false,
-  SVGPointList: false,
-  SVGStringList: false,
-  SVGTransformList: false,
-  SourceBufferList: false,
-  StyleSheetList: true, // TODO: Not spec compliant, should be false.
-  TextTrackCueList: false,
-  TextTrackList: false,
-  TouchList: false
-};
-
-for (var collections = _objectKeys(DOMIterables), i = 0; i < collections.length; i++) {
-  var NAME = collections[i];
-  var explicit = DOMIterables[NAME];
-  var Collection = _global[NAME];
-  var proto = Collection && Collection.prototype;
-  var key;
-  if (proto) {
-    if (!proto[ITERATOR$1]) _hide(proto, ITERATOR$1, ArrayValues);
-    if (!proto[TO_STRING_TAG]) _hide(proto, TO_STRING_TAG, NAME);
-    _iterators[NAME] = ArrayValues;
-    if (explicit) for (key in es6_array_iterator) if (!proto[key]) _redefine(proto, key, es6_array_iterator[key], true);
-  }
-}// most Object methods by ES6 should accept primitives
-
-
-
-var _objectSap = function (KEY, exec) {
-  var fn = (_core.Object || {})[KEY] || Object[KEY];
-  var exp = {};
-  exp[KEY] = exec(fn);
-  _export(_export.S + _export.F * _fails(function () { fn(1); }), 'Object', exp);
-};// 19.1.2.14 Object.keys(O)
-
-
-
-_objectSap('keys', function () {
-  return function keys(it) {
-    return _objectKeys(_toObject(it));
-  };
 });var EMPTY_STATE = "emptyState";
 var UPDATE_CAN_UNDO_REDO = "updateCanUndoRedo";
 var REDO = "redo";
@@ -2418,10 +2449,13 @@ var setConfig = function setConfig(paths) {
 
 var canRedo = function canRedo(paths) {
   return function (namespace) {
-    var config = getConfig(paths)(namespace);
+    var _ref3 = getConfig(paths)(namespace),
+        undone = _ref3.undone;
 
-    if (Object.keys(config).length) {
-      return config.undone.length > 0;
+    if (undone) {
+      return undone.filter(function (mutation) {
+        return !mutation.payload.skip;
+      }).length > 0;
     }
 
     return false;
@@ -2430,19 +2464,22 @@ var canRedo = function canRedo(paths) {
 
 var canUndo = function canUndo(paths) {
   return function (namespace) {
-    var config = getConfig(paths)(namespace);
+    var _ref4 = getConfig(paths)(namespace),
+        done = _ref4.done;
 
-    if (config) {
-      return config.done.length > 0;
+    if (done) {
+      return done.filter(function (mutation) {
+        return !mutation.payload.skip;
+      }).length > 0;
     }
 
     return false;
   };
 };
 
-var updateCanUndoRedo = function updateCanUndoRedo(_ref3) {
-  var paths = _ref3.paths,
-      store = _ref3.store;
+var updateCanUndoRedo = function updateCanUndoRedo(_ref5) {
+  var paths = _ref5.paths,
+      store = _ref5.store;
   return function (namespace) {
     var undoEnabled = canUndo(paths)(namespace);
     var redoEnabled = canRedo(paths)(namespace);
@@ -2479,136 +2516,127 @@ _iterDefine(String, 'String', function (iterated) {
 var execRedo = (function (_ref) {
   var paths = _ref.paths,
       store = _ref.store;
-  return (
-    /*#__PURE__*/
-    function () {
-      var _ref2 = _asyncToGenerator(
-      /*#__PURE__*/
-      regeneratorRuntime.mark(function _callee2(namespace) {
-        var config, _config$undone$reduce, undone, commits, redoCallbacks;
+  return /*#__PURE__*/function () {
+    var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(namespace) {
+      var config, _config$undone$reduce, undone, commits, redoCallbacks;
 
-        return regeneratorRuntime.wrap(function _callee2$(_context2) {
-          while (1) {
-            switch (_context2.prev = _context2.next) {
-              case 0:
-                config = getConfig(paths)(namespace);
+      return regeneratorRuntime.wrap(function _callee2$(_context2) {
+        while (1) {
+          switch (_context2.prev = _context2.next) {
+            case 0:
+              config = getConfig(paths)(namespace);
 
-                if (!Object.keys(config).length) {
-                  _context2.next = 15;
-                  break;
+              if (!Object.keys(config).length) {
+                _context2.next = 15;
+                break;
+              }
+
+              /**
+               * @var {Array} undone - The updated undone stack
+               * @var {Array} commits - The list of mutations to be redone
+               * NB: The reduceRight operation is used to identify the mutation(s) from the
+               * top of the undone stack to be redone
+               */
+              _config$undone$reduce = config.undone.reduceRight(function (_ref3, m) {
+                var commits = _ref3.commits,
+                    undone = _ref3.undone,
+                    proceed = _ref3.proceed;
+
+                if (!commits.length) {
+                  // The "topmost" mutation
+                  commits = [m]; // Do not find more mutations if the mutations does not belong to a group
+
+                  proceed = m.payload.skip || !!m.payload.actionGroup;
+                } else if (!proceed) {
+                  // The mutation(s) to redo have been identified
+                  undone = [m].concat(_toConsumableArray(undone));
+                } else {
+                  // Find mutations belonging to the same actionGroup
+                  var lastCommit = commits[commits.length - 1];
+                  var actionGroup = lastCommit.payload.actionGroup; // Stop finding more mutations if the current mutation belongs to
+                  // another actionGroup, or does not have an actionGroup
+
+                  proceed = m.payload.skip || m.payload.actionGroup && m.payload.actionGroup === actionGroup;
+                  commits = [].concat(_toConsumableArray(proceed ? [m] : []), _toConsumableArray(commits));
+                  undone = [].concat(_toConsumableArray(proceed ? [] : [m]), _toConsumableArray(undone));
                 }
 
-                /**
-                 * @var {Array} undone - The updated undone stack
-                 * @var {Array} commits - The list of mutations to be redone
-                 * NB: The reduceRight operation is used to identify the mutation(s) from the
-                 * top of the undone stack to be redone
-                 */
-                _config$undone$reduce = config.undone.reduceRight(function (_ref3, m) {
-                  var commits = _ref3.commits,
-                      undone = _ref3.undone,
-                      proceed = _ref3.proceed;
+                return {
+                  commits: commits,
+                  undone: undone,
+                  proceed: proceed
+                };
+              }, {
+                commits: [],
+                undone: [],
+                proceed: true
+              }), undone = _config$undone$reduce.undone, commits = _config$undone$reduce.commits;
+              config.newMutation = false; // NB: The array of redoCallbacks and respective action payloads
 
-                  if (!commits.length) {
-                    // The "topmost" mutation
-                    commits = [m]; // Do not find more mutations if the mutations does not belong to a group
+              redoCallbacks = commits.filter(function (mutation) {
+                return mutation.type && mutation.payload;
+              }).map( /*#__PURE__*/function () {
+                var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(_ref4) {
+                  var type, payload, redoCallback;
+                  return regeneratorRuntime.wrap(function _callee$(_context) {
+                    while (1) {
+                      switch (_context.prev = _context.next) {
+                        case 0:
+                          type = _ref4.type, payload = _ref4.payload;
+                          // NB: Commit each mutation in the redo stack
+                          store.commit(type, Array.isArray(payload) ? _toConsumableArray(payload) : payload.constructor(payload)); // Check if there is an redo callback action
 
-                    proceed = !!m.payload.actionGroup;
-                  } else if (!proceed) {
-                    // The mutation(s) to redo have been identified
-                    undone = [m].concat(_toConsumableArray(undone));
-                  } else {
-                    // Find mutations belonging to the same actionGroup
-                    var lastCommit = commits[commits.length - 1];
-                    var actionGroup = lastCommit.payload.actionGroup; // Stop finding more mutations if the current mutation belongs to
-                    // another actionGroup, or does not have an actionGroup
+                          redoCallback = payload.redoCallback; // NB: The object containing the redoCallback action and payload
 
-                    proceed = m.payload.actionGroup && m.payload.actionGroup === actionGroup;
-                    commits = [].concat(_toConsumableArray(proceed ? [m] : []), _toConsumableArray(commits));
-                    undone = [].concat(_toConsumableArray(proceed ? [] : [m]), _toConsumableArray(undone));
-                  }
+                          return _context.abrupt("return", {
+                            action: redoCallback ? "".concat(namespace).concat(redoCallback) : "",
+                            payload: payload
+                          });
 
-                  return {
-                    commits: commits,
-                    undone: undone,
-                    proceed: proceed
-                  };
-                }, {
-                  commits: [],
-                  undone: [],
-                  proceed: true
-                }), undone = _config$undone$reduce.undone, commits = _config$undone$reduce.commits;
-                config.newMutation = false; // NB: The array of redoCallbacks and respective action payloads
-
-                redoCallbacks = commits.filter(function (mutation) {
-                  return mutation.type && mutation.payload;
-                }).map(
-                /*#__PURE__*/
-                function () {
-                  var _ref5 = _asyncToGenerator(
-                  /*#__PURE__*/
-                  regeneratorRuntime.mark(function _callee(_ref4) {
-                    var type, payload, redoCallback;
-                    return regeneratorRuntime.wrap(function _callee$(_context) {
-                      while (1) {
-                        switch (_context.prev = _context.next) {
-                          case 0:
-                            type = _ref4.type, payload = _ref4.payload;
-                            // NB: Commit each mutation in the redo stack
-                            store.commit(type, Array.isArray(payload) ? _toConsumableArray(payload) : payload.constructor(payload)); // Check if there is an redo callback action
-
-                            redoCallback = payload.redoCallback; // NB: The object containing the redoCallback action and payload
-
-                            return _context.abrupt("return", {
-                              action: redoCallback ? "".concat(namespace).concat(redoCallback) : "",
-                              payload: payload
-                            });
-
-                          case 4:
-                          case "end":
-                            return _context.stop();
-                        }
+                        case 4:
+                        case "end":
+                          return _context.stop();
                       }
-                    }, _callee);
-                  }));
-
-                  return function (_x2) {
-                    return _ref5.apply(this, arguments);
-                  };
-                }());
-                _context2.t0 = pipeActions(store);
-                _context2.next = 8;
-                return Promise.all(redoCallbacks);
-
-              case 8:
-                _context2.t1 = _context2.sent;
-                _context2.next = 11;
-                return (0, _context2.t0)(_context2.t1);
-
-              case 11:
-                config.done = [].concat(_toConsumableArray(config.done), _toConsumableArray(commits));
-                config.newMutation = true;
-                setConfig(paths)(namespace, _objectSpread({}, config, {
-                  undone: undone
+                    }
+                  }, _callee);
                 }));
-                updateCanUndoRedo({
-                  paths: paths,
-                  store: store
-                })(namespace);
 
-              case 15:
-              case "end":
-                return _context2.stop();
-            }
+                return function (_x2) {
+                  return _ref5.apply(this, arguments);
+                };
+              }());
+              _context2.t0 = pipeActions(store);
+              _context2.next = 8;
+              return Promise.all(redoCallbacks);
+
+            case 8:
+              _context2.t1 = _context2.sent;
+              _context2.next = 11;
+              return (0, _context2.t0)(_context2.t1);
+
+            case 11:
+              config.done = [].concat(_toConsumableArray(config.done), _toConsumableArray(commits));
+              config.newMutation = true;
+              setConfig(paths)(namespace, _objectSpread2(_objectSpread2({}, config), {}, {
+                undone: undone
+              }));
+              updateCanUndoRedo({
+                paths: paths,
+                store: store
+              })(namespace);
+
+            case 15:
+            case "end":
+              return _context2.stop();
           }
-        }, _callee2);
-      }));
+        }
+      }, _callee2);
+    }));
 
-      return function (_x) {
-        return _ref2.apply(this, arguments);
-      };
-    }()
-  );
+    return function (_x) {
+      return _ref2.apply(this, arguments);
+    };
+  }();
 });/**
  * The Undo function - pushes the latest done mutation to the top of the undone
  * stack by popping the done stack and 'replays' all mutations in the done stack
@@ -2620,224 +2648,210 @@ var execRedo = (function (_ref) {
 var execUndo = (function (_ref) {
   var paths = _ref.paths,
       store = _ref.store;
-  return (
-    /*#__PURE__*/
-    function () {
-      var _ref2 = _asyncToGenerator(
-      /*#__PURE__*/
-      regeneratorRuntime.mark(function _callee2(namespace) {
-        var config, _config$done$reduceRi, done, commits, undoCallbacks, undone, redoCallbacks;
+  return /*#__PURE__*/function () {
+    var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(namespace) {
+      var config, _config$done$reduceRi, done, commits, undoCallbacks, undone, redoCallbacks;
 
-        return regeneratorRuntime.wrap(function _callee2$(_context2) {
-          while (1) {
-            switch (_context2.prev = _context2.next) {
-              case 0:
-                config = getConfig(paths)(namespace);
+      return regeneratorRuntime.wrap(function _callee2$(_context2) {
+        while (1) {
+          switch (_context2.prev = _context2.next) {
+            case 0:
+              config = getConfig(paths)(namespace);
 
-                if (!Object.keys(config).length) {
-                  _context2.next = 19;
-                  break;
+              if (!Object.keys(config).length) {
+                _context2.next = 19;
+                break;
+              }
+
+              /**
+               * @var {Array} done - The updated done stack
+               * @var {Array} commits - The list of mutations which are undone
+               * NB: The reduceRight operation is used to identify the mutation(s) from the
+               * top of the done stack to be undone
+               */
+              _config$done$reduceRi = config.done.reduceRight(function (_ref3, m) {
+                var commits = _ref3.commits,
+                    done = _ref3.done,
+                    proceed = _ref3.proceed;
+
+                if (!commits.length) {
+                  // The "topmost" mutation from the done stack
+                  commits = [m]; // Do not find more mutations if the mutations does not belong to a group
+
+                  proceed = m.payload.skip || !!m.payload.actionGroup;
+                } else if (!proceed) {
+                  // Unshift the mutation to the done stack
+                  done = [m].concat(_toConsumableArray(done));
+                } else {
+                  var lastUndone = commits[commits.length - 1];
+                  var actionGroup = lastUndone.payload.actionGroup; // Unshift to commits if mutation belongs to the same actionGroup,
+                  // otherwise unshift to the done stack
+
+                  proceed = m.payload.skip || m.payload.actionGroup && m.payload.actionGroup === actionGroup;
+                  commits = [].concat(_toConsumableArray(proceed ? [m] : []), _toConsumableArray(commits));
+                  done = [].concat(_toConsumableArray(proceed ? [] : [m]), _toConsumableArray(done));
                 }
 
-                /**
-                 * @var {Array} done - The updated done stack
-                 * @var {Array} commits - The list of mutations which are undone
-                 * NB: The reduceRight operation is used to identify the mutation(s) from the
-                 * top of the done stack to be undone
-                 */
-                _config$done$reduceRi = config.done.reduceRight(function (_ref3, m) {
-                  var commits = _ref3.commits,
-                      done = _ref3.done,
-                      proceed = _ref3.proceed;
-
-                  if (!commits.length) {
-                    // The "topmost" mutation from the done stack
-                    commits = [m]; // Do not find more mutations if the mutations does not belong to a group
-
-                    proceed = !!m.payload.actionGroup;
-                  } else if (!proceed) {
-                    // Unshift the mutation to the done stack
-                    done = [m].concat(_toConsumableArray(done));
-                  } else {
-                    var lastUndone = commits[commits.length - 1];
-                    var actionGroup = lastUndone.payload.actionGroup; // Unshift to commits if mutation belongs to the same actionGroup,
-                    // otherwise unshift to the done stack
-
-                    proceed = m.payload.actionGroup && m.payload.actionGroup === actionGroup;
-                    commits = [].concat(_toConsumableArray(proceed ? [m] : []), _toConsumableArray(commits));
-                    done = [].concat(_toConsumableArray(proceed ? [] : [m]), _toConsumableArray(done));
-                  }
-
-                  return {
-                    done: done,
-                    commits: commits,
-                    proceed: proceed
-                  };
-                }, {
-                  done: [],
-                  commits: [],
-                  proceed: true
-                }), done = _config$done$reduceRi.done, commits = _config$done$reduceRi.commits; // Check if there are any undo callback actions
-
-                undoCallbacks = commits.map(function (_ref4) {
-                  var payload = _ref4.payload;
-                  return {
-                    action: payload.undoCallback ? "".concat(namespace).concat(payload.undoCallback) : "",
-                    payload: payload
-                  };
-                });
-                _context2.next = 6;
-                return pipeActions(store)(undoCallbacks);
-
-              case 6:
-                undone = [].concat(_toConsumableArray(config.undone), _toConsumableArray(commits));
-                config.newMutation = false;
-                store.commit("".concat(namespace).concat(EMPTY_STATE));
-                redoCallbacks = done.filter(function (mutation) {
-                  return mutation.type && mutation.payload;
-                }).map(
-                /*#__PURE__*/
-                function () {
-                  var _ref5 = _asyncToGenerator(
-                  /*#__PURE__*/
-                  regeneratorRuntime.mark(function _callee(mutation) {
-                    var redoCallback;
-                    return regeneratorRuntime.wrap(function _callee$(_context) {
-                      while (1) {
-                        switch (_context.prev = _context.next) {
-                          case 0:
-                            store.commit(mutation.type, Array.isArray(mutation.payload) ? _toConsumableArray(mutation.payload) : mutation.payload.constructor(mutation.payload)); // Check if there is an undo callback action
-
-                            redoCallback = mutation.payload.redoCallback;
-                            return _context.abrupt("return", {
-                              action: redoCallback ? "".concat(namespace).concat(redoCallback) : "",
-                              payload: mutation.payload
-                            });
-
-                          case 3:
-                          case "end":
-                            return _context.stop();
-                        }
-                      }
-                    }, _callee);
-                  }));
-
-                  return function (_x2) {
-                    return _ref5.apply(this, arguments);
-                  };
-                }());
-                _context2.t0 = pipeActions(store);
-                _context2.next = 13;
-                return Promise.all(redoCallbacks);
-
-              case 13:
-                _context2.t1 = _context2.sent;
-                _context2.next = 16;
-                return (0, _context2.t0)(_context2.t1);
-
-              case 16:
-                config.newMutation = true;
-                setConfig(paths)(namespace, _objectSpread({}, config, {
+                return {
                   done: done,
-                  undone: undone
+                  commits: commits,
+                  proceed: proceed
+                };
+              }, {
+                done: [],
+                commits: [],
+                proceed: true
+              }), done = _config$done$reduceRi.done, commits = _config$done$reduceRi.commits; // Check if there are any undo callback actions
+
+              undoCallbacks = commits.map(function (_ref4) {
+                var payload = _ref4.payload;
+                return {
+                  action: payload.undoCallback ? "".concat(namespace).concat(payload.undoCallback) : "",
+                  payload: payload
+                };
+              });
+              _context2.next = 6;
+              return pipeActions(store)(undoCallbacks);
+
+            case 6:
+              undone = [].concat(_toConsumableArray(config.undone), _toConsumableArray(commits));
+              config.newMutation = false;
+              store.commit("".concat(namespace).concat(EMPTY_STATE));
+              redoCallbacks = done.filter(function (mutation) {
+                return mutation.type && mutation.payload;
+              }).map( /*#__PURE__*/function () {
+                var _ref5 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(mutation) {
+                  var redoCallback;
+                  return regeneratorRuntime.wrap(function _callee$(_context) {
+                    while (1) {
+                      switch (_context.prev = _context.next) {
+                        case 0:
+                          store.commit(mutation.type, Array.isArray(mutation.payload) ? _toConsumableArray(mutation.payload) : mutation.payload.constructor(mutation.payload)); // Check if there is an undo callback action
+
+                          redoCallback = mutation.payload.redoCallback;
+                          return _context.abrupt("return", {
+                            action: redoCallback ? "".concat(namespace).concat(redoCallback) : "",
+                            payload: mutation.payload
+                          });
+
+                        case 3:
+                        case "end":
+                          return _context.stop();
+                      }
+                    }
+                  }, _callee);
                 }));
-                updateCanUndoRedo({
-                  paths: paths,
-                  store: store
-                })(namespace);
 
-              case 19:
-              case "end":
-                return _context2.stop();
-            }
+                return function (_x2) {
+                  return _ref5.apply(this, arguments);
+                };
+              }());
+              _context2.t0 = pipeActions(store);
+              _context2.next = 13;
+              return Promise.all(redoCallbacks);
+
+            case 13:
+              _context2.t1 = _context2.sent;
+              _context2.next = 16;
+              return (0, _context2.t0)(_context2.t1);
+
+            case 16:
+              config.newMutation = true;
+              setConfig(paths)(namespace, _objectSpread2(_objectSpread2({}, config), {}, {
+                done: done,
+                undone: undone
+              }));
+              updateCanUndoRedo({
+                paths: paths,
+                store: store
+              })(namespace);
+
+            case 19:
+            case "end":
+              return _context2.stop();
           }
-        }, _callee2);
-      }));
+        }
+      }, _callee2);
+    }));
 
-      return function (_x) {
-        return _ref2.apply(this, arguments);
-      };
-    }()
-  );
+    return function (_x) {
+      return _ref2.apply(this, arguments);
+    };
+  }();
 });var execClear = (function (_ref) {
   var paths = _ref.paths,
       store = _ref.store;
-  return (
-    /*#__PURE__*/
-    function () {
-      var _ref2 = _asyncToGenerator(
-      /*#__PURE__*/
-      regeneratorRuntime.mark(function _callee(namespace) {
-        var config, undoCallbacks, done, undone;
-        return regeneratorRuntime.wrap(function _callee$(_context) {
-          while (1) {
-            switch (_context.prev = _context.next) {
-              case 0:
-                config = getConfig(paths)(namespace);
+  return /*#__PURE__*/function () {
+    var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(namespace) {
+      var config, undoCallbacks, done, undone;
+      return regeneratorRuntime.wrap(function _callee$(_context) {
+        while (1) {
+          switch (_context.prev = _context.next) {
+            case 0:
+              config = getConfig(paths)(namespace);
 
-                if (!Object.keys(config).length) {
-                  _context.next = 12;
-                  break;
-                }
+              if (!Object.keys(config).length) {
+                _context.next = 12;
+                break;
+              }
 
-                undoCallbacks = config.done.map(function (_ref3) {
-                  var payload = _ref3.payload;
-                  return {
-                    action: payload.undoCallback ? "".concat(namespace).concat(payload.undoCallback) : "",
-                    payload: payload
-                  };
-                });
-                _context.next = 5;
-                return pipeActions(store)(undoCallbacks);
+              undoCallbacks = config.done.map(function (_ref3) {
+                var payload = _ref3.payload;
+                return {
+                  action: payload.undoCallback ? "".concat(namespace).concat(payload.undoCallback) : "",
+                  payload: payload
+                };
+              });
+              _context.next = 5;
+              return pipeActions(store)(undoCallbacks);
 
-              case 5:
-                done = [];
-                undone = [];
-                config.newMutation = false;
-                store.commit("".concat(namespace).concat(EMPTY_STATE));
-                config.newMutation = true;
-                setConfig(paths)(namespace, _objectSpread({}, config, {
-                  done: done,
-                  undone: undone
-                }));
-                updateCanUndoRedo({
-                  paths: paths,
-                  store: store
-                })(namespace);
+            case 5:
+              done = [];
+              undone = [];
+              config.newMutation = false;
+              store.commit("".concat(namespace).concat(EMPTY_STATE));
+              config.newMutation = true;
+              setConfig(paths)(namespace, _objectSpread2(_objectSpread2({}, config), {}, {
+                done: done,
+                undone: undone
+              }));
+              updateCanUndoRedo({
+                paths: paths,
+                store: store
+              })(namespace);
 
-              case 12:
-              case "end":
-                return _context.stop();
-            }
+            case 12:
+            case "end":
+              return _context.stop();
           }
-        }, _callee);
-      }));
+        }
+      }, _callee);
+    }));
 
-      return function (_x) {
-        return _ref2.apply(this, arguments);
-      };
-    }()
-  );
+    return function (_x) {
+      return _ref2.apply(this, arguments);
+    };
+  }();
 });var noop = function noop() {};
 
 var undo = noop;
 var redo = noop;
 var clear = noop;
 var scaffoldState = function scaffoldState(state) {
-  return _objectSpread({}, state, {
+  return _objectSpread2(_objectSpread2({}, state), {}, {
     canUndo: false,
     canRedo: false
   });
 };
 var scaffoldActions = function scaffoldActions(actions) {
-  return _objectSpread({}, actions, {
+  return _objectSpread2(_objectSpread2({}, actions), {}, {
     undo: undo,
     redo: redo,
     clear: clear
   });
 };
 var scaffoldMutations = function scaffoldMutations(mutations) {
-  return _objectSpread({}, mutations, {
+  return _objectSpread2(_objectSpread2({}, mutations), {}, {
     updateCanUndoRedo: function updateCanUndoRedo(state, payload) {
       if (payload.canUndo !== undefined) state.canUndo = payload.canUndo;
       if (payload.canRedo !== undefined) state.canRedo = payload.canRedo;
@@ -2845,7 +2859,7 @@ var scaffoldMutations = function scaffoldMutations(mutations) {
   });
 };
 var scaffoldStore = function scaffoldStore(store) {
-  return _objectSpread({}, store, {
+  return _objectSpread2(_objectSpread2({}, store), {}, {
     state: scaffoldState(store.state || {}),
     actions: scaffoldActions(store.actions || {}),
     mutations: scaffoldMutations(store.mutations || {})
@@ -2880,7 +2894,7 @@ var mapPaths = function mapPaths(paths) {
   return paths.map(function (_ref3) {
     var namespace = _ref3.namespace,
         ignoreMutations = _ref3.ignoreMutations;
-    return createPathConfig(_objectSpread({
+    return createPathConfig(_objectSpread2({
       namespace: "".concat(namespace, "/")
     }, ignoreMutations ? mapIgnoreMutations({
       namespace: namespace,
@@ -2891,10 +2905,13 @@ var mapPaths = function mapPaths(paths) {
 
 var canRedo$1 = function canRedo(paths) {
   return function (namespace) {
-    var config = getConfig(paths)(namespace);
+    var _ref4 = getConfig(paths)(namespace),
+        undone = _ref4.undone;
 
-    if (Object.keys(config).length) {
-      return config.undone.length > 0;
+    if (undone) {
+      return undone.filter(function (mutation) {
+        return !mutation.payload.skip;
+      }).length > 0;
     }
 
     return false;
@@ -2903,10 +2920,13 @@ var canRedo$1 = function canRedo(paths) {
 
 var canUndo$1 = function canUndo(paths) {
   return function (namespace) {
-    var config = getConfig(paths)(namespace);
+    var _ref5 = getConfig(paths)(namespace),
+        done = _ref5.done;
 
-    if (config) {
-      return config.done.length > 0;
+    if (done) {
+      return done.filter(function (mutation) {
+        return !mutation.payload.skip;
+      }).length > 0;
     }
 
     return false;
@@ -2943,7 +2963,7 @@ var undoRedo = (function () {
 
         if (mutation.type !== "".concat(namespace).concat(EMPTY_STATE) && mutation.type !== "".concat(namespace).concat(UPDATE_CAN_UNDO_REDO) && ignoreMutations.indexOf(mutation.type) === -1 && mutation.type.includes(namespace) && newMutation) {
           done.push(mutation);
-          setConfig(paths)(namespace, _objectSpread({}, config, {
+          setConfig(paths)(namespace, _objectSpread2(_objectSpread2({}, config), {}, {
             done: done
           }));
           updateCanUndoRedo({
@@ -2954,12 +2974,8 @@ var undoRedo = (function () {
       }
     }); // NB: Watch all actions to intercept the undo/redo NOOP actions
 
-    store.subscribeAction(
-    /*#__PURE__*/
-    function () {
-      var _ref4 = _asyncToGenerator(
-      /*#__PURE__*/
-      regeneratorRuntime.mark(function _callee(action) {
+    store.subscribeAction( /*#__PURE__*/function () {
+      var _ref6 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(action) {
         var isStoreNamespaced, namespace;
         return regeneratorRuntime.wrap(function _callee$(_context) {
           while (1) {
@@ -3023,8 +3039,8 @@ var undoRedo = (function () {
       }));
 
       return function (_x) {
-        return _ref4.apply(this, arguments);
+        return _ref6.apply(this, arguments);
       };
     }());
   };
-});exports.clear=clear;exports.default=undoRedo;exports.redo=redo;exports.scaffoldActions=scaffoldActions;exports.scaffoldMutations=scaffoldMutations;exports.scaffoldState=scaffoldState;exports.scaffoldStore=scaffoldStore;exports.undo=undo;Object.defineProperty(exports,'__esModule',{value:true});}));
+});exports.clear=clear;exports.default=undoRedo;exports.redo=redo;exports.scaffoldActions=scaffoldActions;exports.scaffoldMutations=scaffoldMutations;exports.scaffoldState=scaffoldState;exports.scaffoldStore=scaffoldStore;exports.undo=undo;Object.defineProperty(exports,'__esModule',{value:true});})));

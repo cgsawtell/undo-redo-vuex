@@ -46,7 +46,7 @@ export default ({
           // The "topmost" mutation from the done stack
           commits = [m];
           // Do not find more mutations if the mutations does not belong to a group
-          proceed = !!m.payload.actionGroup;
+          proceed = m.payload.skip || !!m.payload.actionGroup;
         } else if (!proceed) {
           // Unshift the mutation to the done stack
           done = [m, ...done];
@@ -55,8 +55,8 @@ export default ({
           const { actionGroup } = lastUndone.payload;
           // Unshift to commits if mutation belongs to the same actionGroup,
           // otherwise unshift to the done stack
-          proceed =
-            m.payload.actionGroup && m.payload.actionGroup === actionGroup;
+          proceed = m.payload.skip ||
+            ( m.payload.actionGroup && m.payload.actionGroup === actionGroup );
           commits = [...(proceed ? [m] : []), ...commits];
           done = [...(proceed ? [] : [m]), ...done];
         }

@@ -49,17 +49,21 @@ export const setConfig = (paths: UndoRedoOptions[]) => {
 };
 
 const canRedo = (paths: UndoRedoOptions[]) => (namespace: string) => {
-  const config = getConfig(paths)(namespace);
-  if (Object.keys(config).length) {
-    return config.undone.length > 0;
+  const { undone } = getConfig(paths)(namespace) as UndoRedoOptions;
+  if (undone) {
+    return undone
+      .filter((mutation) => !mutation.payload.skip)
+      .length > 0;
   }
   return false;
 };
 
 const canUndo = (paths: UndoRedoOptions[]) => (namespace: string) => {
-  const config = getConfig(paths)(namespace);
-  if (config) {
-    return config.done.length > 0;
+  const { done } = getConfig(paths)(namespace) as UndoRedoOptions;
+  if (done) {
+    return done
+      .filter((mutation) => !mutation.payload.skip)
+      .length > 0;
   }
   return false;
 };
