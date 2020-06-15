@@ -42,8 +42,6 @@ export default ({
         },
         m: Mutation
       ) => {
-        console.log(m.payload);
-        
         if (!commits.length) {
           // The "topmost" mutation from the done stack
           commits = [m];
