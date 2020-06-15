@@ -2673,6 +2673,7 @@ var execUndo = (function (_ref) {
                 var commits = _ref3.commits,
                     done = _ref3.done,
                     proceed = _ref3.proceed;
+                console.log(m.payload);
 
                 if (!commits.length) {
                   // The "topmost" mutation from the done stack
